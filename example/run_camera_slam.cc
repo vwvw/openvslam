@@ -56,8 +56,10 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
         SLAM.shutdown();
         return;
     }
+    video.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
     video.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
-    video.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+    video1.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
+    video1.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
 
     cv::Mat frame;
     cv::Mat frameb;
@@ -67,39 +69,28 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
     std::vector<double> track_times;
 
     // variables for stereo image rectification
-    cv::Mat Matrix1 = (cv::Mat_<double>(3, 3) <<257.26448736*1920/640,   0.        , 320.28653362*1920/640,   0.        ,
-                   375.90182075*1080/480, 204.42398179*1080/480,   0.        ,   0.        ,
-                            1        );
-    cv::Mat dist1 = (cv::Mat_<double>(1, 14) <<-0.20370238,  0.05177081,  0.        ,  0.        ,  0.        ,
-                    0.        ,  0.        ,  0.01081185,  0.        ,  0.        ,
-                            0.        ,  0.        ,  0.        ,  0);
-    cv::Mat Rect_1 = (cv::Mat_<double>(3, 3) <<0.99924677, -0.0249036 , -0.02976071,  0.02464204,  0.99965471,
-                   -0.00912362,  0.02997765,  0.00838338,  0.99951541);
-    cv::Mat Proj1 = (cv::Mat_<double>(3, 4) << 375.90182075*1920/640,   0.        , 463.05285645*1920/640,   0.        ,
-                     0.        , 375.90182075*1080/480,  69.40427017*1080/480,   0.        ,
-                              0.        ,   0.        ,   1.        ,   0.);
 
-    cv::Mat Matrix2 = (cv::Mat_<double>(3, 3) << 257.26448736*1920/640,   0.        , 329.35377012*1920/640,   0.        ,
-                   375.90182075*1080/480, 220.41237496*1080/480,   0.        ,   0.        ,
-                            1. );
-    cv::Mat dist2 = (cv::Mat_<double>(1, 14) <<-0.20582674,  0.05086961,  0.        ,  0.        ,  0.        ,
-                    0.        ,  0.        ,  0.01004183,  0.        ,  0.        ,
-                            0.        ,  0.        ,  0.        ,  0.);
-    cv::Mat Proj2 = (cv::Mat_<double>(3, 4) << 375.90182075*1920/640,   0.        , 463.05285645*1920/640, 822.95633477,
-                     0.        , 375.90182075*1080/480,  69.40427017*1080/480,   0.        ,
-                              0.        ,   0.        ,   1.        ,   0.);
-    cv::Mat Rect_2 = (cv::Mat_<double>(3, 3) <<  0.99952138, -0.02565789,  0.01728232,  0.02550557,  0.99963438,
-                    0.00897665, -0.01750633, -0.00853156,  0.99981035);
+    cv::Mat Proj1 = (cv::Mat_<double>(3,4) << 1354.61399523, 0.0, 799.28490448, 0.0, 0.0, 1354.61399523, 532.021461487, 0.0, 0.0, 0.0, 1.0, 0.0);
+    cv::Mat Proj2 = (cv::Mat_<double>(3,4) << 1354.61399523, 0.0, 799.28490448, 3055.96096986, 0.0, 1354.61399523, 532.021461487, 0.0, 0.0, 0.0, 1.0, 0.0);
+    cv::Mat Rect_1 = (cv::Mat_<double>(3,3) << 0.996937332321, 0.0121357087942, 0.0772572326557, -0.0120439939178, 0.9999261022, -0.00165298213167, -0.077271583626, 0.000717433956507, 0.997009823248);
+    cv::Mat Rect_2 = (cv::Mat_<double>(3,3) << 0.998127491797, 0.00954551702489, 0.0604184841213, -0.00961720723976, 0.999953352282, 0.000895871400919, -0.0604071141811, -0.00147525095728, 0.998172732642);
+
+    cv::Mat Matrix1 = (cv::Mat_<double>(3,3) << 1476.84824872, 0.0, 967.139052368, 0.0, 1416.0587045, 521.833122122, 0.0, 0.0, 1.0);
+    cv::Mat Matrix2 = (cv::Mat_<double>(3,3) << 1476.84824872, 0.0, 906.94313055, 0.0, 1416.0587045, 536.993803971, 0.0, 0.0, 1.0);
+    cv::Mat dist1 = (cv::Mat_<double>(14,1) << -0.345985969537, -0.291714403638, 0.0, 0.0, 0.0, 0.0, 0.0, -0.564446527387, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    cv::Mat dist2 = (cv::Mat_<double>(14,1) << -0.302062963411, -0.39871929128, 0.0, 0.0, 0.0, 0.0, 0.0, -0.633842904892, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+
     
 
     const auto cols = cfg->camera_->cols_;
     const auto rows = cfg->camera_->rows_;
 
     cv::Mat M1_l, M2_l, M1_r, M2_r;
-    cv::Size imageSize = cv::Size(1920, 720);
-    cv::initUndistortRectifyMap(Matrix1, dist1, Rect_1, Proj1.rowRange(0,3).colRange(0,3), imageSize, CV_32F, M1_l, M2_l);
-    cv::initUndistortRectifyMap(Matrix2, dist2, Rect_2, Proj2.rowRange(0,3).colRange(0,3), imageSize, CV_32F, M1_r, M2_r);
+    cv::Size imageSize = cv::Size(1920, 1080);
+    cv::initUndistortRectifyMap(Matrix1, dist1, Rect_1, Proj1, imageSize, CV_32F, M1_l, M2_l);
+    cv::initUndistortRectifyMap(Matrix2, dist2, Rect_2, Proj2, imageSize, CV_32F, M1_r, M2_r);
     unsigned int num_frame = 0;
+    std::cout << M1_l.at<float>(0,0) << std::endl;
 
     bool is_not_end = true;
     // run the SLAM in another thread
@@ -122,20 +113,8 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
             }//*/
             cv::remap(frame, frameb, M1_l, M2_l, cv::INTER_LINEAR);
             cv::remap(frame2, frame2b, M1_r, M2_r, cv::INTER_LINEAR);
-            /*
-            bool result = false;
-            try
-            {
-                result = imwrite("alpha.png", frameb);
-            }
-            catch (const cv::Exception& ex)
-            {
-                fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-            }
-            if (result)
-                printf("Saved PNG file with alpha data.\n");
-            else
-                printf("ERROR: Can't save PNG file.\n"); //*/
+
+
             const auto tp_1 = std::chrono::steady_clock::now();
 
             // input the current frame and estimate the camera pose

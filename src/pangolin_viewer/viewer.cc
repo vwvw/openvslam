@@ -286,11 +286,13 @@ void viewer::draw_landmarks() {
     }
 
     glPointSize(point_size_ * *menu_lm_size_);
+
     glColor3fv(cs_.lm_.data());
 
     glBegin(GL_POINTS);
 
     for (const auto lm : landmarks) {
+//    std::cout << lm->get_ref_keyframe()->frm_->img_gray_->at<double>(0,0)<< std::endl;
         if (!lm || lm->will_be_erased()) {
             continue;
         }

@@ -136,38 +136,29 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
     socket_publisher::publisher publisher(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #endif
 
-    auto video = cv::VideoCapture(cam_num);
-    auto video1 = cv::VideoCapture(cam_num+1);
-    if (!video.isOpened()) {
-        spdlog::critical("cannot open a camera {}", cam_num);
-        SLAM.shutdown();
-        return;
-    }
-    if (!video1.isOpened()) {
-        spdlog::critical("cannot open a camera {}", cam_num+1);
-        SLAM.shutdown();
-        return;
-    }
-    video.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
-    video.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
-    video1.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
-    video1.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
+    cv::Size imageSize = cv::Size(cfg->camera_->cols_, cfg->camera_->rows_);
 
-    cv::Mat frame;
-    cv::Mat frameb;
-    cv::Mat frame2;
-    cv::Mat frame2b;
+    cv::VideoCapture videos [2];
+    for(int i = 0; i < 2; i++) {
+        videos[i] = cv::VideoCapture(cam_num + i);
+        if (!videos[i].isOpened()) {
+            spdlog::critical("cannot open a camera {}", cam_num + i);
+            SLAM.shutdown();
+            return;
+            }
+        videos[i].set(CV_CAP_PROP_FRAME_WIDTH, imageSize.width);
+        videos[i].set(CV_CAP_PROP_FRAME_HEIGHT, imageSize.height);
+    }
+    const openvslam::util::stereo_rectifier rectifier(cfg);
+
+    cv::Mat frames [2];
+    cv::Mat frames_rectified [2];
+
     double timestamp = 0.0;
     std::vector<double> track_times;
 
-    // variables for stereo image rectification
-
-    const auto cols = cfg->camera_->cols_;
-    const auto rows = cfg->camera_->rows_;
-
     unsigned int num_frame = 0;
 
-    const openvslam::util::stereo_rectifier rectifier(cfg);
 
 
     bool is_not_end = true;
@@ -178,24 +169,24 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
             if (SLAM.terminate_is_requested()) {
                 break;
             }
-
-            is_not_end = video.read(frame);
-            is_not_end = video1.read(frame2) && is_not_end;
-            if (frame.empty() || frame2.empty()) {
+            is_not_end = videos[0].read(frames[0]);
+            bool is_not_end2 = videos[1].read(frames[1]);
+            is_not_end = is_not_end && is_not_end2;
+            if (frames[0].empty() || frames[1].empty()) {
                 continue;
             }
-            //*
-            if (scale != 1.0) {
-                cv::resize(frame, frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
-                cv::resize(frame2, frame2, cv::Size(), scale, scale, cv::INTER_LINEAR);
-            }//*/
-            rectifier.rectify(frame, frame2, frameb, frame2b);
 
+            for(int i = 0; i < 2; i++) {
+                if (scale != 1.0) {
+                    cv::resize(frames[i], frames[i], cv::Size(), scale, scale, cv::INTER_LINEAR);
+                }
+            }
+            rectifier.rectify(frames[0], frames[1], frames_rectified[0], frames_rectified[1]);
 
             const auto tp_1 = std::chrono::steady_clock::now();
 
             // input the current frame and estimate the camera pose
-            SLAM.feed_stereo_frame(frame2b, frameb, timestamp);
+            SLAM.feed_stereo_frame(frames_rectified[1], frames_rectified[0], timestamp);
 
             const auto tp_2 = std::chrono::steady_clock::now();
 

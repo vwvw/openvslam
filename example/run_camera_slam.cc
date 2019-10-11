@@ -10,6 +10,7 @@
 
 #include "openvslam/system.h"
 #include "openvslam/config.h"
+#include "openvslam/util/stereo_rectifier.h"
 
 #include <iostream>
 #include <thread>
@@ -19,6 +20,7 @@
 #include <opencv2/core/core.hpp>
 #include <spdlog/spdlog.h>
 #include <popl.hpp>
+
 
 #ifdef USE_STACK_TRACE_LOGGER
 #include <glog/logging.h>
@@ -160,27 +162,13 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
 
     // variables for stereo image rectification
 
-    cv::Mat Proj1 = (cv::Mat_<double>(3,4) << 1354.61399523, 0.0, 799.28490448, 0.0, 0.0, 1354.61399523, 532.021461487, 0.0, 0.0, 0.0, 1.0, 0.0);
-    cv::Mat Proj2 = (cv::Mat_<double>(3,4) << 1354.61399523, 0.0, 799.28490448, 3055.96096986, 0.0, 1354.61399523, 532.021461487, 0.0, 0.0, 0.0, 1.0, 0.0);
-    cv::Mat Rect_1 = (cv::Mat_<double>(3,3) << 0.996937332321, 0.0121357087942, 0.0772572326557, -0.0120439939178, 0.9999261022, -0.00165298213167, -0.077271583626, 0.000717433956507, 0.997009823248);
-    cv::Mat Rect_2 = (cv::Mat_<double>(3,3) << 0.998127491797, 0.00954551702489, 0.0604184841213, -0.00961720723976, 0.999953352282, 0.000895871400919, -0.0604071141811, -0.00147525095728, 0.998172732642);
-
-    cv::Mat Matrix1 = (cv::Mat_<double>(3,3) << 1476.84824872, 0.0, 967.139052368, 0.0, 1416.0587045, 521.833122122, 0.0, 0.0, 1.0);
-    cv::Mat Matrix2 = (cv::Mat_<double>(3,3) << 1476.84824872, 0.0, 906.94313055, 0.0, 1416.0587045, 536.993803971, 0.0, 0.0, 1.0);
-    cv::Mat dist1 = (cv::Mat_<double>(14,1) << -0.345985969537, -0.291714403638, 0.0, 0.0, 0.0, 0.0, 0.0, -0.564446527387, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    cv::Mat dist2 = (cv::Mat_<double>(14,1) << -0.302062963411, -0.39871929128, 0.0, 0.0, 0.0, 0.0, 0.0, -0.633842904892, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-
-    
-
     const auto cols = cfg->camera_->cols_;
     const auto rows = cfg->camera_->rows_;
 
-    cv::Mat M1_l, M2_l, M1_r, M2_r;
-    cv::Size imageSize = cv::Size(1920, 1080);
-    cv::initUndistortRectifyMap(Matrix1, dist1, Rect_1, Proj1, imageSize, CV_32F, M1_l, M2_l);
-    cv::initUndistortRectifyMap(Matrix2, dist2, Rect_2, Proj2, imageSize, CV_32F, M1_r, M2_r);
     unsigned int num_frame = 0;
-    std::cout << M1_l.at<float>(0,0) << std::endl;
+
+    const openvslam::util::stereo_rectifier rectifier(cfg);
+
 
     bool is_not_end = true;
     // run the SLAM in another thread
@@ -201,8 +189,7 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
                 cv::resize(frame, frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
                 cv::resize(frame2, frame2, cv::Size(), scale, scale, cv::INTER_LINEAR);
             }//*/
-            cv::remap(frame, frameb, M1_l, M2_l, cv::INTER_LINEAR);
-            cv::remap(frame2, frame2b, M1_r, M2_r, cv::INTER_LINEAR);
+            rectifier.rectify(frame, frame2, frameb, frame2b);
 
 
             const auto tp_1 = std::chrono::steady_clock::now();

@@ -41,7 +41,7 @@ bool keyframe_inserter::new_keyframe_is_needed(const data::frame& curr_frm, cons
 
     // 最新のキーフレームで観測している3次元点数に対する，現在のフレームで観測している3次元点数の割合の閾値
     constexpr unsigned int num_tracked_lms_thr = 15;
-    const float lms_ratio_thr = 0.9;
+    const float lms_ratio_thr = 0.6;
 
     // 条件A1: 前回のキーフレーム挿入からmax_num_frames_以上経過していたらキーフレームを追加する
     const bool cond_a1 = frm_id_of_last_keyfrm_ + max_num_frms_ <= curr_frm.id_;
@@ -98,7 +98,6 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
     // 有効なdepthとそのindexを格納する
     std::vector<std::pair<float, unsigned int>> depth_idx_pairs;
     depth_idx_pairs.reserve(curr_frm.num_keypts_);
-    //std::cout << "hello: " << true_depth_thr_ << std::endl;
     for (unsigned int idx = 0; idx < curr_frm.num_keypts_; ++idx) {
         const auto depth = curr_frm.depths_.at(idx);
         // depthが有効な範囲のものを追加する
@@ -115,7 +114,6 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
 
     // カメラに近い順に並べ直す
     std::sort(depth_idx_pairs.begin(), depth_idx_pairs.end());
-    //std::cout << "HELLO" << std::endl;
 
     // depthを使って3次元点を最小min_num_to_create点作る
     constexpr unsigned int min_num_to_create = 100;
@@ -128,7 +126,6 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
             break;
         }
 
-        //std::cout << depth << " ";
         // idxに対応する3次元点がある場合はstereo triangulationしない
         {
             auto lm = curr_frm.landmarks_.at(idx);
@@ -151,7 +148,6 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
 
         map_db_->add_landmark(lm);
     }
-    //std::cout <<std:: endl;
 
     // keyframeをqueueして終わり
     queue_keyframe(keyfrm);

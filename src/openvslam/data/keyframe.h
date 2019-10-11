@@ -222,8 +222,6 @@ public:
     //! timestamp in seconds
     const double timestamp_;
 
-    const frame* frm_;
-
     //-----------------------------------------
     // camera parameters
 

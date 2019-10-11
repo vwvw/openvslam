@@ -292,7 +292,6 @@ void viewer::draw_landmarks() {
     glBegin(GL_POINTS);
 
     for (const auto lm : landmarks) {
-//    std::cout << lm->get_ref_keyframe()->frm_->img_gray_->at<double>(0,0)<< std::endl;
         if (!lm || lm->will_be_erased()) {
             continue;
         }

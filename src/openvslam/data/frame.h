@@ -154,7 +154,6 @@ public:
      */
     Vec3_t triangulate_stereo(const unsigned int idx) const;
 
-    const cv::Mat* img_gray_ = nullptr;
     //! current frame ID
     unsigned int id_;
 

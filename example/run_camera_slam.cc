@@ -27,7 +27,97 @@
 #ifdef USE_GOOGLE_PERFTOOLS
 #include <gperftools/profiler.h>
 #endif
+void mono_tracking(const std::shared_ptr<openvslam::config>& cfg,
+                   const std::string& vocab_file_path, const unsigned int cam_num, const std::string& mask_img_path,
+                   const float scale, const std::string& map_db_path) {
+    // load the mask image
+    const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE);
 
+    // build a SLAM system
+    openvslam::system SLAM(cfg, vocab_file_path);
+    // startup the SLAM process
+    SLAM.startup();
+
+    // create a viewer object
+    // and pass the frame_publisher and the map_publisher
+#ifdef USE_PANGOLIN_VIEWER
+    pangolin_viewer::viewer viewer(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
+#elif USE_SOCKET_PUBLISHER
+    socket_publisher::publisher publisher(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
+#endif
+
+    auto video = cv::VideoCapture(cam_num);
+    if (!video.isOpened()) {
+        spdlog::critical("cannot open a camera {}", cam_num);
+        SLAM.shutdown();
+        return;
+    }
+
+    cv::Mat frame;
+    double timestamp = 0.0;
+    std::vector<double> track_times;
+
+    unsigned int num_frame = 0;
+
+    bool is_not_end = true;
+    // run the SLAM in another thread
+    std::thread thread([&]() {
+        while (is_not_end) {
+            // check if the termination of SLAM system is requested or not
+            if (SLAM.terminate_is_requested()) {
+                break;
+            }
+
+            is_not_end = video.read(frame);
+            if (frame.empty()) {
+                continue;
+            }
+            if (scale != 1.0) {
+                cv::resize(frame, frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+            }
+
+            const auto tp_1 = std::chrono::steady_clock::now();
+
+            // input the current frame and estimate the camera pose
+            SLAM.feed_monocular_frame(frame, timestamp, mask);
+
+            const auto tp_2 = std::chrono::steady_clock::now();
+
+            const auto track_time = std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+            track_times.push_back(track_time);
+
+            timestamp += 1.0 / cfg->camera_->fps_;
+            ++num_frame;
+        }
+
+        // wait until the loop BA is finished
+        while (SLAM.loop_BA_is_running()) {
+            std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        }
+    });
+
+    // run the viewer in the current thread
+#ifdef USE_PANGOLIN_VIEWER
+    viewer.run();
+#elif USE_SOCKET_PUBLISHER
+    publisher.run();
+#endif
+
+    thread.join();
+
+    // shutdown the SLAM process
+    SLAM.shutdown();
+
+    if (!map_db_path.empty()) {
+        // output the map database
+        SLAM.save_map_database(map_db_path);
+    }
+
+    std::sort(track_times.begin(), track_times.end());
+    const auto total_track_time = std::accumulate(track_times.begin(), track_times.end(), 0.0);
+    std::cout << "median tracking time: " << track_times.at(track_times.size() / 2) << "[s]" << std::endl;
+    std::cout << "mean tracking time: " << total_track_time / track_times.size() << "[s]" << std::endl;
+}
 void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
                    const std::string& vocab_file_path, const unsigned int cam_num, const std::string& mask_img_path,
                    const float scale, const std::string& map_db_path) {

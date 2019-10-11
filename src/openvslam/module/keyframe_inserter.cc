@@ -41,7 +41,7 @@ bool keyframe_inserter::new_keyframe_is_needed(const data::frame& curr_frm, cons
 
     // 最新のキーフレームで観測している3次元点数に対する，現在のフレームで観測している3次元点数の割合の閾値
     constexpr unsigned int num_tracked_lms_thr = 15;
-    const float lms_ratio_thr = 0.6;
+    const float lms_ratio_thr = 0.9;
 
     // 条件A1: 前回のキーフレーム挿入からmax_num_frames_以上経過していたらキーフレームを追加する
     const bool cond_a1 = frm_id_of_last_keyfrm_ + max_num_frms_ <= curr_frm.id_;

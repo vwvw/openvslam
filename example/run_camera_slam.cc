@@ -4,6 +4,7 @@
 #include "socket_publisher/publisher.h"
 #endif
 
+
 #include "openvslam/system.h"
 #include "openvslam/config.h"
 #include "openvslam/util/stereo_rectifier.h"
@@ -49,7 +50,10 @@ void mono_tracking(const std::shared_ptr<openvslam::config>& cfg,
         SLAM.shutdown();
         return;
     }
-
+    cv::Size imageSize = cv::Size(cfg->camera_->rows_, cfg->camera_->cols_);
+    video.set(cv::CAP_PROP_FRAME_WIDTH, imageSize.width);
+    video.set(cv::CAP_PROP_FRAME_HEIGHT, imageSize.height);
+    
     cv::Mat frame;
     double timestamp = 0.0;
     std::vector<double> track_times;
@@ -133,14 +137,17 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
     socket_publisher::publisher publisher(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #endif
 
-    cv::VideoCapture videos[2];
-    for (int i = 0; i < 2; i++) {
-        videos[i] = cv::VideoCapture(cam_num + i);
+    cv::VideoCapture videos [2];
+    cv::Size imageSize = cv::Size(cfg->camera_->cols_, cfg->camera_->rows_);
+    for(int i = 0; i < 2; i++) {
+        videos[i] = cv::VideoCapture(cam_num + i*2);
         if (!videos[i].isOpened()) {
             spdlog::critical("cannot open a camera {}", cam_num + i);
             SLAM.shutdown();
             return;
         }
+        videos[i].set(cv::CAP_PROP_FRAME_WIDTH, imageSize.width);
+        videos[i].set(cv::CAP_PROP_FRAME_HEIGHT, imageSize.height);
     }
 
     const openvslam::util::stereo_rectifier rectifier(cfg);
@@ -174,7 +181,7 @@ void stereo_tracking(const std::shared_ptr<openvslam::config>& cfg,
             const auto tp_1 = std::chrono::steady_clock::now();
 
             // input the current frame and estimate the camera pose
-            SLAM.feed_stereo_frame(frames_rectified[0], frames_rectified[1], timestamp, mask);
+            SLAM.feed_stereo_frame(frames_rectified[1], frames_rectified[0], timestamp, mask);
 
             const auto tp_2 = std::chrono::steady_clock::now();
 

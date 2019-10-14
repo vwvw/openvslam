@@ -1,4 +1,5 @@
 #include "openvslam/camera/perspective.h"
+#include "openvslam/util/image_converter.h"
 #include "openvslam/camera/fisheye.h"
 #include "openvslam/camera/equirectangular.h"
 #include "openvslam/data/common.h"
@@ -26,8 +27,11 @@ frame::frame(const cv::Mat& img_gray, const double timestamp,
     // ORBのスケール情報を取得
     update_orb_info();
 
+    cv::Mat img_gray2 = img_gray.clone();
+    util::convert_to_grayscale(img_gray2, camera_->color_order_);
+
     // ORB特徴量を抽出
-    extract_orb(img_gray, mask);
+    extract_orb(img_gray2, mask);
     num_keypts_ = keypts_.size();
     if (keypts_.empty()) {
         spdlog::warn("frame {}: cannot extract any keypoints", id_);
@@ -59,10 +63,14 @@ frame::frame(const cv::Mat& left_img_gray, const cv::Mat& right_img_gray, const 
       timestamp_(timestamp), camera_(camera), depth_thr_(depth_thr) {
     // ORBのスケール情報を取得
     update_orb_info();
+    cv::Mat left_img_gray2 = left_img_gray.clone();
+    cv::Mat right_img_gray2 = right_img_gray.clone();
+    util::convert_to_grayscale(left_img_gray2, camera_->color_order_);
+    util::convert_to_grayscale(right_img_gray2, camera_->color_order_);
 
     // ORB特徴量を抽出
-    std::thread thread_left(&frame::extract_orb, this, left_img_gray, mask, image_side::Left);
-    std::thread thread_right(&frame::extract_orb, this, right_img_gray, mask, image_side::Right);
+    std::thread thread_left(&frame::extract_orb, this, left_img_gray2, mask, image_side::Left);
+    std::thread thread_right(&frame::extract_orb, this, right_img_gray2, mask, image_side::Right);
     thread_left.join();
     thread_right.join();
     num_keypts_ = keypts_.size();
@@ -100,8 +108,11 @@ frame::frame(const cv::Mat& img_gray, const cv::Mat& img_depth, const double tim
     // ORBのスケール情報を取得
     update_orb_info();
 
+    cv::Mat img_gray2 = img_gray.clone();
+    util::convert_to_grayscale(img_gray2, camera_->color_order_);
+
     // ORB特徴量を抽出
-    extract_orb(img_gray, mask);
+    extract_orb(img_gray2, mask);
     num_keypts_ = keypts_.size();
     if (keypts_.empty()) {
         spdlog::warn("frame {}: cannot extract any keypoints", id_);

@@ -24,7 +24,7 @@ void frame_statistics::update_frame_statistics(const data::frame& frm, const boo
     is_lost_frms_[frm.id_] = is_lost;
 }
 
-void frame_statistics::replace_reference_keyframe(data::keyframe* old_keyfrm, data::keyframe* new_keyfrm) {
+void frame_statistics::replace_reference_keyframe(const std::shared_ptr<data::keyframe>& old_keyfrm, const std::shared_ptr<data::keyframe>& new_keyfrm) {
     // keyframeを削除する時は以下の手順で対応関係の更新を行う
     // 1. frm_ids_of_ref_keyfrms_で削除対象のkeyframeを参照しているframeのIDsを検索する
     // 2. ref_keyfrms_.at(ID)を削除対象のkeyframeのparentに変更する
@@ -65,7 +65,7 @@ void frame_statistics::replace_reference_keyframe(data::keyframe* old_keyfrm, da
     frm_ids_of_ref_keyfrms_.erase(old_keyfrm);
 }
 
-std::unordered_map<data::keyframe*, std::vector<unsigned int>> frame_statistics::get_frame_id_of_reference_keyframes() const {
+std::unordered_map<std::shared_ptr<data::keyframe>, std::vector<unsigned int>> frame_statistics::get_frame_id_of_reference_keyframes() const {
     return frm_ids_of_ref_keyfrms_;
 }
 
@@ -73,7 +73,7 @@ unsigned int frame_statistics::get_num_valid_frames() const {
     return num_valid_frms_;
 }
 
-std::map<unsigned int, data::keyframe*> frame_statistics::get_reference_keyframes() const {
+std::map<unsigned int, std::shared_ptr<data::keyframe>> frame_statistics::get_reference_keyframes() const {
     return {ref_keyfrms_.begin(), ref_keyfrms_.end()};
 }
 

@@ -78,14 +78,14 @@ bool keyframe_inserter::new_keyframe_is_needed(const data::frame& curr_frm, cons
     return false;
 }
 
-data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
+std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
     // mapping moduleを(強制的に)動かす
     if (!mapper_->set_force_to_run(true)) {
         return nullptr;
     }
 
     curr_frm.update_pose_params();
-    auto keyfrm = new data::keyframe(curr_frm, map_db_, bow_db_);
+    auto keyfrm = data::keyframe::make_keyframe(curr_frm, map_db_, bow_db_);
 
     frm_id_of_last_keyfrm_ = curr_frm.id_;
 
@@ -128,7 +128,7 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
 
         // idxに対応する3次元点がある場合はstereo triangulationしない
         {
-            auto lm = curr_frm.landmarks_.at(idx);
+            const auto& lm = curr_frm.landmarks_.at(idx);
             if (lm) {
                 assert(lm->has_observation());
                 continue;
@@ -140,7 +140,7 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
         const Vec3_t pos_w = curr_frm.triangulate_stereo(idx);
         cv::Point2f pt = curr_frm.keypts_[count].pt;
         cv::Vec<uchar, 3> color = curr_frm.img_gray_->at<cv::Vec<uchar, 3>>(pt.y, pt.x);
-        auto lm = new data::landmark(pos_w, keyfrm, map_db_, color);
+        auto lm = std::make_shared<data::landmark>(pos_w, keyfrm, map_db_, color);
 
         lm->add_observation(keyfrm, idx);
         keyfrm->add_landmark(lm, idx);
@@ -157,7 +157,7 @@ data::keyframe* keyframe_inserter::insert_new_keyframe(data::frame& curr_frm) {
     return keyfrm;
 }
 
-void keyframe_inserter::queue_keyframe(data::keyframe* keyfrm) {
+void keyframe_inserter::queue_keyframe(const std::shared_ptr<data::keyframe>& keyfrm) {
     mapper_->queue_keyframe(keyfrm);
     mapper_->set_force_to_run(false);
 }

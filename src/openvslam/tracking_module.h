@@ -206,11 +206,11 @@ protected:
     module::keyframe_inserter keyfrm_inserter_;
 
     //! reference keyframe
-    data::keyframe* ref_keyfrm_ = nullptr;
+    std::shared_ptr<data::keyframe> ref_keyfrm_ = nullptr;
     //! local keyframes
-    std::vector<data::keyframe*> local_keyfrms_;
+    std::vector<std::shared_ptr<data::keyframe>> local_keyfrms_;
     //! local landmarks
-    std::vector<data::landmark*> local_landmarks_;
+    std::vector<std::shared_ptr<data::landmark>> local_landmarks_;
 
     //! the number of tracked keyframes in the current keyframe
     unsigned int num_tracked_lms_ = 0;

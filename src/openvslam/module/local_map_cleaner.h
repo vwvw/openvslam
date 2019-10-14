@@ -34,7 +34,7 @@ public:
     /**
      * Add fresh landmark to check their redundancy
      */
-    void add_fresh_landmark(data::landmark* lm) {
+    void add_fresh_landmark(std::shared_ptr<data::landmark>& lm) {
         fresh_landmarks_.push_back(lm);
     }
 
@@ -51,12 +51,12 @@ public:
     /**
      * Remove redundant keyframes
      */
-    unsigned int remove_redundant_keyframes(data::keyframe* cur_keyfrm) const;
+    unsigned int remove_redundant_keyframes(const std::shared_ptr<data::keyframe>& cur_keyfrm) const;
 
     /**
      * Count the valid and the redundant observations in the specified keyframe
      */
-    void count_redundant_observations(data::keyframe* keyfrm, unsigned int& num_valid_obs, unsigned int& num_redundant_obs) const;
+    void count_redundant_observations(const std::shared_ptr<data::keyframe>& keyfrm, unsigned int& num_valid_obs, unsigned int& num_redundant_obs) const;
 
 private:
     //! origin keyframe ID
@@ -66,7 +66,7 @@ private:
     const bool is_monocular_;
 
     //! fresh landmarks to check their redundancy
-    std::list<data::landmark*> fresh_landmarks_;
+    std::list<std::shared_ptr<data::landmark>> fresh_landmarks_;
 };
 
 } // namespace module

@@ -36,13 +36,13 @@ public:
      * @param old_keyfrm
      * @param new_keyfrm
      */
-    void replace_reference_keyframe(data::keyframe* old_keyfrm, data::keyframe* new_keyfrm);
+    void replace_reference_keyframe(const std::shared_ptr<data::keyframe>& old_keyfrm, const std::shared_ptr<data::keyframe>& new_keyfrm);
 
     /**
      * Get frame IDs of each of the reference keyframes
      * @return
      */
-    std::unordered_map<data::keyframe*, std::vector<unsigned int>> get_frame_id_of_reference_keyframes() const;
+    std::unordered_map<std::shared_ptr<data::keyframe>, std::vector<unsigned int>> get_frame_id_of_reference_keyframes() const;
 
     /**
      * Get the number of the contained valid frames
@@ -54,7 +54,7 @@ public:
      * Get reference keyframes of each of the frames
      * @return
      */
-    std::map<unsigned int, data::keyframe*> get_reference_keyframes() const;
+    std::map<unsigned int, std::shared_ptr<data::keyframe>> get_reference_keyframes() const;
 
     /**
      * Get relative camera poses from the corresponding reference keyframes
@@ -81,13 +81,13 @@ public:
 
 private:
     //! reference keyframeと，そのkeyframeを参照しているframeのID
-    std::unordered_map<data::keyframe*, std::vector<unsigned int>> frm_ids_of_ref_keyfrms_;
+    std::unordered_map<std::shared_ptr<data::keyframe>, std::vector<unsigned int>> frm_ids_of_ref_keyfrms_;
 
     //! フレーム数
     unsigned int num_valid_frms_ = 0;
     // 以下のvectorは処理フレーム数だけ要素が存在
     //! 各frameのreference keyframe
-    std::unordered_map<unsigned int, data::keyframe*> ref_keyfrms_;
+    std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>> ref_keyfrms_;
     //! 各frameのreference keyframeに対する相対姿勢
     eigen_alloc_unord_map<unsigned int, Mat44_t> rel_cam_poses_from_ref_keyfrms_;
     //! 各frameのtimestamp

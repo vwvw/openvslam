@@ -23,7 +23,7 @@ map_database::~map_database() {
     spdlog::debug("DESTRUCT: data::map_database");
 }
 
-void map_database::add_keyframe(keyframe* keyfrm) {
+void map_database::add_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     keyframes_[keyfrm->id_] = keyfrm;
     if (keyfrm->id_ > max_keyfrm_id_) {
@@ -31,38 +31,34 @@ void map_database::add_keyframe(keyframe* keyfrm) {
     }
 }
 
-void map_database::erase_keyframe(keyframe* keyfrm) {
+void map_database::erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     keyframes_.erase(keyfrm->id_);
-
-    // TODO: 実体を削除
 }
 
-void map_database::add_landmark(landmark* lm) {
+void map_database::add_landmark(std::shared_ptr<landmark>& lm) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     landmarks_[lm->id_] = lm;
 }
 
-void map_database::erase_landmark(landmark* lm) {
+void map_database::erase_landmark(unsigned int id) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
-    landmarks_.erase(lm->id_);
-
-    // TODO: 実体を削除
+    landmarks_.erase(id);
 }
 
-void map_database::set_local_landmarks(const std::vector<landmark*>& local_lms) {
+void map_database::set_local_landmarks(const std::vector<std::shared_ptr<landmark>>& local_lms) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     local_landmarks_ = local_lms;
 }
 
-std::vector<landmark*> map_database::get_local_landmarks() const {
+std::vector<std::shared_ptr<landmark>> map_database::get_local_landmarks() const {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     return local_landmarks_;
 }
 
-std::vector<keyframe*> map_database::get_all_keyframes() const {
+std::vector<std::shared_ptr<keyframe>> map_database::get_all_keyframes() const {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
-    std::vector<keyframe*> keyframes;
+    std::vector<std::shared_ptr<keyframe>> keyframes;
     keyframes.reserve(keyframes_.size());
     for (const auto id_keyframe : keyframes_) {
         keyframes.push_back(id_keyframe.second);
@@ -75,9 +71,9 @@ unsigned int map_database::get_num_keyframes() const {
     return keyframes_.size();
 }
 
-std::vector<landmark*> map_database::get_all_landmarks() const {
+std::vector<std::shared_ptr<landmark>> map_database::get_all_landmarks() const {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
-    std::vector<landmark*> landmarks;
+    std::vector<std::shared_ptr<landmark>> landmarks;
     landmarks.reserve(landmarks_.size());
     for (const auto id_landmark : landmarks_) {
         landmarks.push_back(id_landmark.second);
@@ -99,12 +95,10 @@ void map_database::clear() {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
 
     for (auto& lm : landmarks_) {
-        delete lm.second;
         lm.second = nullptr;
     }
 
     for (auto& keyfrm : keyframes_) {
-        delete keyfrm.second;
         keyfrm.second = nullptr;
     }
 
@@ -126,12 +120,10 @@ void map_database::from_json(camera_database* cam_db, bow_vocabulary* bow_vocab,
     // 1. データベースを全削除する
 
     for (auto& lm : landmarks_) {
-        delete lm.second;
         lm.second = nullptr;
     }
 
     for (auto& keyfrm : keyframes_) {
-        delete keyfrm.second;
         keyfrm.second = nullptr;
     }
 
@@ -207,7 +199,7 @@ void map_database::from_json(camera_database* cam_db, bow_vocabulary* bow_vocab,
         assert(0 <= id);
 
         assert(landmarks_.count(id));
-        auto lm = landmarks_.at(id);
+        const auto& lm = landmarks_.at(id);
 
         lm->update_normal_and_depth();
         lm->compute_descriptor();
@@ -258,9 +250,10 @@ void map_database::register_keyframe(camera_database* cam_db, bow_vocabulary* bo
     const auto scale_factor = json_keyfrm.at("scale_factor").get<float>();
 
     // 2-4. オブジェクト構築
-    auto keyfrm = new data::keyframe(id, src_frm_id, timestamp, cam_pose_cw, camera, depth_thr,
-                                     num_keypts, keypts, undist_keypts, bearings, stereo_x_right, depths, descriptors,
-                                     num_scale_levels, scale_factor, bow_vocab, bow_db, this);
+    auto keyfrm = data::keyframe::make_keyframe(
+        id, src_frm_id, timestamp, cam_pose_cw, camera, depth_thr,
+        num_keypts, keypts, undist_keypts, bearings, stereo_x_right, depths, descriptors,
+        num_scale_levels, scale_factor, bow_vocab, bow_db, this);
 
     // 2-5. データベースに追加
     assert(!keyframes_.count(id));
@@ -282,8 +275,9 @@ void map_database::register_landmark(const unsigned int id, const nlohmann::json
     const auto num_visible = json_landmark.at("n_vis").get<unsigned int>();
     const auto num_found = json_landmark.at("n_fnd").get<unsigned int>();
 
-    auto lm = new data::landmark(id, first_keyfrm_id, pos_w, ref_keyfrm,
-                                 num_visible, num_found, this, color);
+    auto lm = std::make_shared<data::landmark>(
+        id, first_keyfrm_id, pos_w, ref_keyfrm,
+        num_visible, num_found, this, color);
     assert(!landmarks_.count(id));
     landmarks_[lm->id_] = lm;
 }
@@ -325,7 +319,7 @@ void map_database::register_association(const unsigned int keyfrm_id, const nloh
             continue;
         }
 
-        auto lm = landmarks_.at(lm_id);
+        const auto& lm = landmarks_.at(lm_id);
         keyfrm->add_landmark(lm, idx);
         lm->add_observation(keyfrm, idx);
     }
@@ -354,7 +348,7 @@ void map_database::to_json(nlohmann::json& json_keyfrms, nlohmann::json& json_la
     std::map<std::string, nlohmann::json> landmarks;
     for (const auto id_lm : landmarks_) {
         const auto id = id_lm.first;
-        const auto lm = id_lm.second;
+        const auto& lm = id_lm.second;
         assert(lm);
         assert(id == lm->id_);
         assert(!lm->will_be_erased());

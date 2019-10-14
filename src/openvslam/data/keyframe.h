@@ -33,17 +33,9 @@ class landmark;
 class map_database;
 class bow_database;
 
-class keyframe {
+class keyframe : public std::enable_shared_from_this<keyframe> {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-    // operator overrides
-    bool operator==(const keyframe& keyfrm) const { return id_ == keyfrm.id_; }
-    bool operator!=(const keyframe& keyfrm) const { return !(*this == keyfrm); }
-    bool operator<(const keyframe& keyfrm) const { return id_ < keyfrm.id_; }
-    bool operator<=(const keyframe& keyfrm) const { return id_ <= keyfrm.id_; }
-    bool operator>(const keyframe& keyfrm) const { return id_ > keyfrm.id_; }
-    bool operator>=(const keyframe& keyfrm) const { return id_ >= keyfrm.id_; }
 
     /**
      * Constructor for building from a frame
@@ -61,6 +53,26 @@ public:
              const std::vector<float>& stereo_x_right, const std::vector<float>& depths, const cv::Mat& descriptors,
              const unsigned int num_scale_levels, const float scale_factor,
              bow_vocabulary* bow_vocab, bow_database* bow_db, map_database* map_db);
+    virtual ~keyframe();
+
+    // Factory method for create keyframe
+    static std::shared_ptr<keyframe> make_keyframe(const frame& frm, map_database* map_db, bow_database* bow_db);
+    static std::shared_ptr<keyframe> make_keyframe(
+        const unsigned int id, const unsigned int src_frm_id, const double timestamp,
+        const Mat44_t& cam_pose_cw, camera::base* camera, const float depth_thr,
+        const unsigned int num_keypts, const std::vector<cv::KeyPoint>& keypts,
+        const std::vector<cv::KeyPoint>& undist_keypts, const eigen_alloc_vector<Vec3_t>& bearings,
+        const std::vector<float>& stereo_x_right, const std::vector<float>& depths, const cv::Mat& descriptors,
+        const unsigned int num_scale_levels, const float scale_factor,
+        bow_vocabulary* bow_vocab, bow_database* bow_db, map_database* map_db);
+
+    // operator overrides
+    bool operator==(const keyframe& keyfrm) const { return id_ == keyfrm.id_; }
+    bool operator!=(const keyframe& keyfrm) const { return !(*this == keyfrm); }
+    bool operator<(const keyframe& keyfrm) const { return id_ < keyfrm.id_; }
+    bool operator<=(const keyframe& keyfrm) const { return id_ <= keyfrm.id_; }
+    bool operator>(const keyframe& keyfrm) const { return id_ > keyfrm.id_; }
+    bool operator>=(const keyframe& keyfrm) const { return id_ >= keyfrm.id_; }
 
     /**
      * Encode this keyframe information as JSON
@@ -116,7 +128,7 @@ public:
     /**
      * Add a landmark observed by myself at keypoint idx
      */
-    void add_landmark(landmark* lm, const unsigned int idx);
+    void add_landmark(std::shared_ptr<landmark> lm, const unsigned int idx);
 
     /**
      * Erase a landmark observed by myself at keypoint idx
@@ -126,23 +138,23 @@ public:
     /**
      * Erase a landmark
      */
-    void erase_landmark(landmark* lm);
+    void erase_landmark(const std::shared_ptr<landmark>& lm);
 
     /**
      * Replace the landmark
      */
-    void replace_landmark(landmark* lm, const unsigned int idx);
+    void replace_landmark(std::shared_ptr<landmark>& lm, const unsigned int idx);
 
     /**
      * Get all of the landmarks
      * (NOTE: including nullptr)
      */
-    std::vector<landmark*> get_landmarks() const;
+    std::vector<std::shared_ptr<landmark>> get_landmarks() const;
 
     /**
      * Get the valid landmarks
      */
-    std::set<landmark*> get_valid_landmarks() const;
+    std::set<std::shared_ptr<landmark>> get_valid_landmarks() const;
 
     /**
      * Get the number of tracked landmarks which have observers equal to or greater than the threshold
@@ -152,7 +164,7 @@ public:
     /**
      * Get the landmark associated keypoint idx
      */
-    landmark* get_landmark(const unsigned int idx) const;
+    std::shared_ptr<landmark>& get_landmark(const unsigned int idx);
 
     /**
      * Get the keypoint indices in the cell which reference point is located
@@ -270,7 +282,7 @@ public:
     // covisibility graph
 
     //! graph node
-    const std::unique_ptr<graph_node> graph_node_ = nullptr;
+    std::unique_ptr<graph_node> graph_node_ = nullptr;
 
     //-----------------------------------------
     // ORB scale pyramid information
@@ -307,7 +319,7 @@ private:
     //! need mutex for access to observations
     mutable std::mutex mtx_observations_;
     //! observed landmarks
-    std::vector<landmark*> landmarks_;
+    std::vector<std::shared_ptr<landmark>> landmarks_;
 
     //-----------------------------------------
     // databases

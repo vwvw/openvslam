@@ -42,11 +42,11 @@ std::string data_serializer::serialize_messages(const std::vector<std::string>& 
 }
 
 std::string data_serializer::serialize_map_diff() {
-    std::vector<openvslam::data::keyframe*> keyframes;
+    std::vector<std::shared_ptr<openvslam::data::keyframe>> keyframes;
     map_publisher_->get_keyframes(keyframes);
 
-    std::vector<openvslam::data::landmark*> all_landmarks;
-    std::set<openvslam::data::landmark*> local_landmarks;
+    std::vector<std::shared_ptr<openvslam::data::landmark>> all_landmarks;
+    std::set<std::shared_ptr<openvslam::data::landmark>> local_landmarks;
     map_publisher_->get_landmarks(all_landmarks, local_landmarks);
 
     const auto current_camera_pose = map_publisher_->get_current_cam_pose();
@@ -71,9 +71,9 @@ std::string data_serializer::serialize_latest_frame(const unsigned int image_qua
     return base64_serial;
 }
 
-std::string data_serializer::serialize_as_protobuf(const std::vector<openvslam::data::keyframe*>& keyfrms,
-                                                   const std::vector<openvslam::data::landmark*>& all_landmarks,
-                                                   const std::set<openvslam::data::landmark*>& local_landmarks,
+std::string data_serializer::serialize_as_protobuf(const std::vector<std::shared_ptr<openvslam::data::keyframe>>& keyfrms,
+                                                   const std::vector<std::shared_ptr<openvslam::data::landmark>>& all_landmarks,
+                                                   const std::set<std::shared_ptr<openvslam::data::landmark>>& local_landmarks,
                                                    const openvslam::Mat44_t& current_camera_pose) {
     map_segment::map map;
     auto message = map.add_messages();
@@ -177,7 +177,7 @@ std::string data_serializer::serialize_as_protobuf(const std::vector<openvslam::
     // 3. landmark registration
 
     std::unordered_map<unsigned int, double> next_point_hash_map;
-    for (const auto landmark : all_landmarks) {
+    for (const auto& landmark : all_landmarks) {
         if (!landmark || landmark->will_be_erased()) {
             continue;
         }
@@ -220,7 +220,7 @@ std::string data_serializer::serialize_as_protobuf(const std::vector<openvslam::
 
     // 4. local landmark registration
 
-    for (const auto landmark : local_landmarks) {
+    for (const auto& landmark : local_landmarks) {
         map.add_local_landmarks(landmark->id_);
     }
 

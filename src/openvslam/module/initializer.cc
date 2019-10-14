@@ -171,8 +171,8 @@ bool initializer::create_map_for_monocular(data::frame& curr_frm) {
     }
 
     // create initial keyframes
-    auto init_keyfrm = new data::keyframe(init_frm_, map_db_, bow_db_);
-    auto curr_keyfrm = new data::keyframe(curr_frm, map_db_, bow_db_);
+    auto init_keyfrm = data::keyframe::make_keyframe(init_frm_, map_db_, bow_db_);
+    auto curr_keyfrm = data::keyframe::make_keyframe(curr_frm, map_db_, bow_db_);
 
     // compute BoW representations
     init_keyfrm->compute_bow();
@@ -198,7 +198,7 @@ bool initializer::create_map_for_monocular(data::frame& curr_frm) {
         // construct a landmark
         cv::Point2f pt = curr_frm.keypts_[init_idx].pt;
         cv::Vec<uchar, 3> color = curr_frm.img_gray_->at<cv::Vec<uchar, 3>>(pt.y, pt.x);
-        auto lm = new data::landmark(init_triangulated_pts.at(init_idx), curr_keyfrm, map_db_, color);
+        auto lm = std::make_shared<data::landmark>(init_triangulated_pts.at(init_idx), curr_keyfrm, map_db_, color);
 
         // set the assocications to the new keyframes
         init_keyfrm->add_landmark(lm, init_idx);
@@ -244,7 +244,7 @@ bool initializer::create_map_for_monocular(data::frame& curr_frm) {
     return true;
 }
 
-void initializer::scale_map(data::keyframe* init_keyfrm, data::keyframe* curr_keyfrm, const double scale) {
+void initializer::scale_map(const std::shared_ptr<data::keyframe>& init_keyfrm, const std::shared_ptr<data::keyframe>& curr_keyfrm, const double scale) {
     // scaling keyframes
     Mat44_t cam_pose_cw = curr_keyfrm->get_cam_pose();
     cam_pose_cw.block<3, 1>(0, 3) *= scale;
@@ -252,7 +252,7 @@ void initializer::scale_map(data::keyframe* init_keyfrm, data::keyframe* curr_ke
 
     // scaling landmarks
     const auto landmarks = init_keyfrm->get_landmarks();
-    for (auto lm : landmarks) {
+    for (const auto& lm : landmarks) {
         if (!lm) {
             continue;
         }
@@ -275,7 +275,7 @@ bool initializer::create_map_for_stereo(data::frame& curr_frm) {
 
     // create an initial keyframe
     curr_frm.set_cam_pose(Mat44_t::Identity());
-    auto curr_keyfrm = new data::keyframe(curr_frm, map_db_, bow_db_);
+    auto curr_keyfrm = data::keyframe::make_keyframe(curr_frm, map_db_, bow_db_);
 
     // compute BoW representation
     curr_keyfrm->compute_bow();
@@ -298,7 +298,7 @@ bool initializer::create_map_for_stereo(data::frame& curr_frm) {
         const Vec3_t pos_w = curr_frm.triangulate_stereo(idx);
         cv::Point2f pt = curr_frm.keypts_[idx].pt;
         cv::Vec<uchar, 3> color = curr_frm.img_gray_->at<cv::Vec<uchar, 3>>(pt.y, pt.x);
-        auto lm = new data::landmark(pos_w, curr_keyfrm, map_db_, color);
+        auto lm = std::make_shared<data::landmark>(pos_w, curr_keyfrm, map_db_, color);
 
         // set the associations to the new keyframe
         lm->add_observation(curr_keyfrm, idx);

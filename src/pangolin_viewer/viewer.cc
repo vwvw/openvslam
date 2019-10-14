@@ -198,7 +198,7 @@ void viewer::draw_keyframes() {
     // frustum size of keyframes
     const float w = keyfrm_size_ * *menu_frm_size_;
 
-    std::vector<openvslam::data::keyframe*> keyfrms;
+    std::vector<std::shared_ptr<openvslam::data::keyframe>> keyfrms;
     map_publisher_->get_keyframes(keyfrms);
 
     if (*menu_show_keyfrms_) {
@@ -275,8 +275,8 @@ void viewer::draw_landmarks() {
         return;
     }
 
-    std::vector<openvslam::data::landmark*> landmarks;
-    std::set<openvslam::data::landmark*> local_landmarks;
+    std::vector<std::shared_ptr<openvslam::data::landmark>> landmarks;
+    std::set<std::shared_ptr<openvslam::data::landmark>> local_landmarks;
 
     map_publisher_->get_landmarks(landmarks, local_landmarks);
 
@@ -288,9 +288,9 @@ void viewer::draw_landmarks() {
 
     glBegin(GL_POINTS);
 
-    for (const auto lm : landmarks) {
-        glColor3ub(lm->color_[0],lm->color_[1], lm->color_[2]);
 
+    for (const auto& lm : landmarks) {
+        glColor3ub(lm->color_[0],lm->color_[1], lm->color_[2]);
         if (!lm || lm->will_be_erased()) {
             continue;
         }
@@ -311,7 +311,7 @@ void viewer::draw_landmarks() {
 
     glBegin(GL_POINTS);
 
-    for (const auto local_lm : local_landmarks) {
+    for (const auto& local_lm : local_landmarks) {
         glColor3ub(local_lm->color_[0],local_lm->color_[1], local_lm->color_[2]);
         if (local_lm->will_be_erased()) {
             continue;

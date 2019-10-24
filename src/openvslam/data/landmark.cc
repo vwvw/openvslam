@@ -359,6 +359,7 @@ nlohmann::json landmark::to_json() const {
             {"pos_w", {pos_w_(0), pos_w_(1), pos_w_(2)}},
             {"ref_keyfrm", ref_keyfrm_->id_},
             {"n_vis", num_observable_},
+            {"mean_normal", {mean_normal_(0), mean_normal_(1), mean_normal_(2)}},
             {"n_fnd", num_observed_}};
 }
 

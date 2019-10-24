@@ -1,0 +1,74 @@
+# Digger stereo model
+
+#==============#
+# Camera Model #
+#==============#
+
+Camera.name: "Digger stereo"
+Camera.setup: "stereo"
+Camera.model: "perspective"
+
+Camera.k1: -0.34598597
+Camera.k2: -0.2917144
+Camera.p1: 0.0
+Camera.p2: 0.0
+Camera.k3: 0.0
+
+Camera.fx: 1354.6139952256685
+Camera.fy: 1354.6139952256685
+Camera.cx: 799.2849044799805
+Camera.cy: 532.0214614868164
+Camera.fps: 30.0
+Camera.cols: 1920
+Camera.rows: 1080
+Camera.focal_x_baseline: 44.546
+
+Camera.color_order: "RGB"
+
+StereoRectifier.R_left: [ 0.99693733, 0.01213571, 0.07725723, -0.01204399, 0.9999261, -0.00165298, -0.07727158, 0.00071743, 0.99700982]
+StereoRectifier.R_right: [ 0.99812749, 0.00954552, 0.06041848, -0.00961721, 0.99995335, 0.00089587, -0.06040711, -0.00147525, 0.99817273]
+
+StereoRectifier.K_left: [1476.84824872, 0.0, 967.13905237, 0.0, 1416.0587045, 521.83312212, 0.0, 0.0, 1.0]
+StereoRectifier.K_right: [1476.84824872, 0.0, 906.94313055, 0.0, 1416.0587045, 536.99380397, 0.0, 0.0, 1.0]
+StereoRectifier.D_left: [-0.34598597, -0.2917144, 0., 0., 0., 0., 0., -0.56444653, 0., 0., 0., 0., 0., 0. ]
+StereoRectifier.D_right: [-0.30206296, -0.39871929, 0., 0., 0., 0., 0., -0.6338429, 0., 0., 0., 0., 0., 0. ]
+
+#=====================#
+# Tracking Parameters #
+#=====================#
+
+depth_treshold: 400
+
+
+
+#================#
+# ORB Parameters #
+#================#
+
+Feature.max_num_keypoints: 10000
+Feature.scale_factor: 1.1
+Feature.num_levels: 24
+Feature.ini_fast_threshold: 20
+Feature.min_fast_threshold: 7
+#Feature.patch_size: 31
+
+#========================#
+# Initializer Parameters #
+#========================#
+
+Initializer.num_min_triangulated_pts: 100
+
+#===========================#
+# PangolinViewer Parameters #
+#===========================#
+
+PangolinViewer.keyframe_size: 0.07
+PangolinViewer.keyframe_line_width: 1
+PangolinViewer.graph_line_width: 1
+PangolinViewer.point_size: 2
+PangolinViewer.camera_size: 0.08
+PangolinViewer.camera_line_width: 3
+PangolinViewer.viewpoint_x: 0
+PangolinViewer.viewpoint_y: -0.65
+PangolinViewer.viewpoint_z: -1.9
+PangolinViewer.viewpoint_f: 400
